@@ -6,28 +6,54 @@
     <title>Protótipo: Monitoramento de Rodovias</title>
     
     <!-- Importando o CSS do mapa (Leaflet) -->
-    <link rel="stylesheet" href="https://unpkg.com" crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     
     <style>
-        body {
+        html, body {
+            width: 100%;
+            height: 100%;
             margin: 0;
             padding: 0;
+        }
+        body {
             font-family: Arial, sans-serif;
-            display: flex;
             height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
         }
         #map {
-            flex: 3;
-            height: 100vh;
-            background: #e5e3df; /* Cor de fundo caso o mapa demore a carregar */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;  /* Compatibilidade com navegadores antigos */
+            height: 100dvh; /* Área visível em navegadores atuais */
+            z-index: 0;
+            background: #e5e3df;
         }
         #painel-controle {
-            flex: 1;
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            bottom: 32px;
+            z-index: 1000;
+            width: 360px;
+            max-width: calc(100% - 24px);
+            box-sizing: border-box;
             background: #f4f4f9;
             padding: 20px;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.2);
             overflow-y: auto;
-            min-width: 300px;
+        }
+        @media (max-width: 700px) {
+            #painel-controle {
+                top: auto;
+                left: 12px;
+                right: 12px;
+                width: auto;
+                max-height: 40%;
+            }
         }
         .form-group {
             margin-bottom: 15px;
@@ -103,15 +129,25 @@
     </div>
 
     <!-- Importando o JavaScript do mapa (Leaflet) -->
-    <script src="https://unpkg.com" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
     <script>
         // Inicializa o mapa focado no Brasil
         const map = L.map('map').setView([-14.2350, -51.9253], 4);
 
+        // Recalcula o mapa quando a área visível muda, inclusive em celulares.
+        if ('ResizeObserver' in window) {
+            const observadorMapa = new ResizeObserver(function () {
+                map.invalidateSize({ pan: false, debounceMoveend: true });
+            });
+            observadorMapa.observe(document.getElementById('map'));
+        }
+
         // Adiciona as imagens do mapa de código aberto
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            referrerPolicy: 'strict-origin-when-cross-origin',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
         let cliqueLatitude = 0;
@@ -161,3 +197,4 @@
     </script>
 </body>
 </html>
+
