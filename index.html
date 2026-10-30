@@ -6,7 +6,7 @@
     <title>Protótipo: Monitoramento de Rodovias</title>
     
     <!-- Importando o CSS do mapa (Leaflet) -->
-    <link rel="stylesheet" href="https://unpkg.com" />
+    <link rel="stylesheet" href="https://unpkg.com" crossorigin="" />
     
     <style>
         body {
@@ -19,6 +19,7 @@
         #map {
             flex: 3;
             height: 100%;
+            background: #e5e3df; /* Cor de fundo caso o mapa demore a carregar */
         }
         #painel-controle {
             flex: 1;
@@ -26,6 +27,7 @@
             padding: 20px;
             box-shadow: -2px 0 5px rgba(0,0,0,0.1);
             overflow-y: auto;
+            min-width: 300px;
         }
         .form-group {
             margin-bottom: 15px;
@@ -64,10 +66,8 @@
 </head>
 <body>
 
-    <!-- O MAPA FICA AQUI -->
     <div id="map"></div>
 
-    <!-- O PAINEL LATERAL (Simulando o sistema do governo ou envio) -->
     <div id="painel-controle">
         <h2>Reportar Problema</h2>
         <p><small>💡 Clique em qualquer ponto do mapa para capturar a localização exata da rodovia.</small></p>
@@ -99,19 +99,17 @@
 
         <hr style="margin: 25px 0;">
         <h3>Lista de Chamados (Painel do Governo)</h3>
-        <div id="lista-chamados">
-            <!-- Os chamados enviados vão aparecer aqui dinamicamente -->
-        </div>
+        <div id="lista-chamados"></div>
     </div>
 
     <!-- Importando o JavaScript do mapa (Leaflet) -->
-    <script src="https://unpkg.com"></script>
+    <script src="https://unpkg.com" crossorigin=""></script>
     
     <script>
-        // 1. Inicializa o mapa focado no Brasil
+        // Inicializa o mapa focado no Brasil
         const map = L.map('map').setView([-14.2350, -51.9253], 4);
 
-        // 2. Adiciona as imagens do mapa (OpenStreetMap de código aberto)
+        // Adiciona as imagens do mapa de código aberto
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
@@ -119,18 +117,14 @@
         let cliqueLatitude = 0;
         let cliqueLongitude = 0;
 
-        // 3. Detecta o clique no mapa para simular a geolocalização do motorista
         map.on('click', function(e) {
             cliqueLatitude = e.latlng.lat;
             cliqueLongitude = e.latlng.lng;
-            
-            // Preenche o campo de texto com as coordenadas
             document.getElementById('coords').value = `${cliqueLatitude.toFixed(5)}, ${cliqueLongitude.toFixed(5)}`;
         });
 
-        // 4. Gerencia o envio do formulário
         document.getElementById('form-problema').addEventListener('submit', function(e) {
-            e.preventDefault(); // Impede a página de recarregar
+            e.preventDefault();
 
             const coordsInput = document.getElementById('coords').value;
             if (!coordsInput) {
@@ -142,10 +136,8 @@
             const descricao = document.getElementById('descricao').value;
             const fotoUrl = document.getElementById('foto-url').value;
 
-            // Criar o marcador (Pin) vermelho no mapa no local exato do clique
             const marcador = L.marker([cliqueLatitude, cliqueLongitude]).addTo(map);
             
-            // Pop-up que aparece quando alguém clica no Pin no mapa
             marcador.bindPopup(`
                 <b>🚨 ${tipo}</b><br>
                 ${descricao}<br><br>
@@ -153,7 +145,6 @@
                 <small>Status: Enviado ao DER/DNIT</small>
             `).openPopup();
 
-            // Adicionar o chamado na lista lateral do governo
             const lista = document.getElementById('lista-chamados');
             const novoChamado = document.createElement('div');
             novoChamado.className = 'alerta';
@@ -165,7 +156,6 @@
             `;
             lista.prepend(novoChamado);
 
-            // Limpa o formulário para o próximo teste
             document.getElementById('form-problema').reset();
         });
     </script>
