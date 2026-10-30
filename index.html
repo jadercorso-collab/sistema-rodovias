@@ -3,198 +3,561 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Protótipo: Monitoramento de Rodovias</title>
-    
-    <!-- Importando o CSS do mapa (Leaflet) -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>Monitoramento de Rodovias — Chamados com fotos</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     <style>
-        html, body {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            height: 100vh;
-            height: 100dvh;
-            overflow: hidden;
-        }
-        #map {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;  /* Compatibilidade com navegadores antigos */
-            height: 100dvh; /* Área visível em navegadores atuais */
-            z-index: 0;
-            background: #e5e3df;
-        }
-        #painel-controle {
-            position: fixed;
-            top: 12px;
-            right: 12px;
-            bottom: 32px;
-            z-index: 1000;
-            width: 360px;
-            max-width: calc(100% - 24px);
-            box-sizing: border-box;
-            background: #f4f4f9;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-            overflow-y: auto;
-        }
-        @media (max-width: 700px) {
-            #painel-controle {
-                top: auto;
-                left: 12px;
-                right: 12px;
-                width: auto;
-                max-height: 40%;
-            }
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        input, select, textarea, button {
-            width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        button {
-            background: #007bff;
-            color: white;
-            cursor: pointer;
-            font-weight: bold;
-            border: none;
-        }
-        button:hover {
-            background: #0056b3;
-        }
-        .alerta {
-            background: #fff;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-left: 5px solid #ff4d4d;
-            border-radius: 4px;
-            font-size: 14px;
+        html, body { width:100%; height:100%; margin:0; padding:0; }
+        body { font-family:Arial,sans-serif; color:#1d2939; height:100vh; height:100dvh; overflow:hidden; }
+        #map { position:fixed; top:0; left:0; width:100%; height:100vh; height:100dvh; z-index:0; background:#e5e3df; }
+        #painel-controle { position:fixed; top:12px; right:12px; bottom:32px; z-index:1000; width:380px; max-width:calc(100% - 24px); box-sizing:border-box; background:#f8fafc; padding:20px; border-radius:12px; box-shadow:0 2px 12px #0003; overflow-y:auto; overscroll-behavior:contain; }
+        h1 { font-size:23px; margin:0 0 10px; }
+        h2 { font-size:19px; }
+        .orientacao, .ajuda, .aviso-local { font-size:13px; line-height:1.5; color:#475467; }
+        .aviso-local { background:#eaf2ff; border-radius:7px; padding:10px; }
+        .form-group { margin-bottom:16px; }
+        label, legend { display:block; margin-bottom:7px; font-weight:bold; font-size:14px; }
+        input, select, textarea, button { width:100%; padding:10px; box-sizing:border-box; border:1px solid #b9c3d0; border-radius:6px; font:inherit; font-size:16px; }
+        input, select, textarea { background:#fff; color:#1d2939; }
+        input[readonly] { color:#344054; background:#f1f5f9; }
+        button { min-height:44px; background:#1565d8; color:white; cursor:pointer; font-weight:bold; border:1px solid transparent; }
+        button:hover { background:#0c4eae; }
+        button:disabled { opacity:.55; cursor:wait; }
+        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline:3px solid #89b8ff; outline-offset:2px; }
+        .secundario { color:#17549d; background:#fff; border-color:#adbed5; }
+        .secundario:hover { background:#eaf2ff; }
+        .perigo { color:#b42318; background:#fff; border-color:#f2b8b5; }
+        .perigo:hover { background:#fff1f0; }
+        .acoes-foto, .acoes-chamado { display:flex; flex-wrap:wrap; gap:8px; }
+        .acoes-foto button, .acoes-chamado button { flex:1 1 130px; }
+        fieldset { margin:0 0 16px; padding:0; border:0; min-width:0; }
+        #foto-preview { width:100%; max-height:190px; object-fit:contain; background:#e5e7eb; border-radius:7px; margin-top:10px; }
+        #foto-nome { overflow-wrap:anywhere; margin:8px 0; }
+        #remover-foto { margin-top:6px; }
+        #mensagem { padding:10px; border-radius:6px; background:#eaf2ff; font-size:14px; line-height:1.4; overflow-wrap:anywhere; }
+        #mensagem:empty { display:none; }
+        #mensagem.erro, #mensagem[data-tipo="erro"] { background:#fff1f0; color:#9b1c1c; }
+        #mensagem.sucesso, #mensagem[data-tipo="sucesso"] { background:#e8f7ee; color:#166534; }
+        .lista-cabecalho { display:flex; justify-content:space-between; align-items:center; gap:12px; border-top:1px solid #d0d5dd; margin-top:22px; padding-top:8px; }
+        #total-chamados { background:#dbeafe; color:#17549d; border-radius:20px; padding:4px 10px; font-size:14px; }
+        .alerta, .chamado-card { background:white; padding:14px; margin-bottom:12px; border:1px solid #dce3ec; border-left:4px solid #1565d8; border-radius:8px; font-size:14px; overflow-wrap:anywhere; }
+        .alerta h3, .chamado-card h3 { margin:0 0 8px; font-size:16px; }
+        .alerta p, .chamado-card p { white-space:pre-wrap; line-height:1.45; }
+        .alerta img, .chamado-card img { display:block; width:100%; max-height:170px; object-fit:contain; background:#f1f5f9; border-radius:6px; margin:10px 0; }
+        .alerta button, .chamado-card button { margin-top:7px; font-size:14px; }
+        .status-chamado { color:#166534; font-size:12px; }
+        .vazio { color:#667085; font-size:14px; line-height:1.5; }
+        [hidden] { display:none !important; }
+        dialog { border:0; border-radius:12px; padding:18px; max-width:min(92vw,900px); max-height:90vh; max-height:90dvh; box-sizing:border-box; overflow:auto; }
+        dialog::backdrop { background:#101828c9; }
+        #foto-ampliada { display:block; max-width:100%; max-height:65vh; object-fit:contain; margin:12px auto; }
+        #fechar-foto { margin-top:12px; }
+        .leaflet-popup-content { overflow-wrap:anywhere; }
+        .leaflet-popup-content img { max-width:100%; max-height:180px; object-fit:contain; }
+        @media (max-width:700px) {
+            #painel-controle { top:auto; left:12px; right:12px; width:auto; max-height:40%; padding:16px; }
+            h1 { font-size:21px; }
+            .acoes-foto button { font-size:14px; }
         }
     </style>
 </head>
 <body>
-
-    <div id="map"></div>
-
-    <div id="painel-controle">
-        <h2>Reportar Problema</h2>
-        <p><small>💡 Clique em qualquer ponto do mapa para capturar a localização exata da rodovia.</small></p>
-        
+    <div id="map" aria-label="Mapa para localizar ocorrências"></div>
+    <aside id="painel-controle" aria-label="Registrar e consultar chamados">
+        <h1>Reportar problema</h1>
+        <p class="orientacao">Toque em um ponto do mapa para marcar o local. No celular, role este painel para preencher e consultar os chamados.</p>
+        <p class="aviso-local">Chamados e fotos ficam salvos neste navegador, neste aparelho. Este protótipo não envia relatos ao governo. Limpar os dados do site pode apagar os registros.</p>
         <form id="form-problema">
             <div class="form-group">
-                <label>Coordenadas Capturadas:</label>
-                <input type="text" id="coords" readonly placeholder="Clique no mapa para preencher">
+                <label for="coords">Local no mapa</label>
+                <input type="text" id="coords" readonly placeholder="Toque no mapa para preencher">
             </div>
             <div class="form-group">
-                <label>Tipo de Ocorrência:</label>
-                <select id="tipo">
-                    <option value="Buraco na Pista">Cratera / Buraco na Pista</option>
-                    <option value="Queda de Barreira">Queda de Barreira / Desmoronamento</option>
-                    <option value="Sinalização Ruim">Falta de Sinalização</option>
-                    <option value="Acostamento Danificado">Problema no Acostamento</option>
+                <label for="tipo">Tipo de ocorrência</label>
+                <select id="tipo" required>
+                    <option value="Buraco na Pista">Cratera / Buraco na pista</option>
+                    <option value="Queda de Barreira">Queda de barreira / Desmoronamento</option>
+                    <option value="Sinalização Ruim">Falta de sinalização</option>
+                    <option value="Acostamento Danificado">Problema no acostamento</option>
                 </select>
             </div>
             <div class="form-group">
-                <label>Descrição do Problema:</label>
-                <textarea id="descricao" rows="3" placeholder="Ex: Buraco profundo na faixa da direita no KM 42..."></textarea>
+                <label for="descricao">Descrição</label>
+                <textarea id="descricao" rows="3" maxlength="2000" placeholder="Ex.: buraco na faixa da direita, próximo ao km 42."></textarea>
             </div>
-            <div class="form-group">
-                <label>Simular Link da Foto (URL):</label>
-                <input type="text" id="foto-url" value="https://unsplash.com" placeholder="Cole o link de uma imagem">
-            </div>
-            <button type="submit">Enviar Relato para o Governo</button>
+            <fieldset aria-describedby="ajuda-foto">
+                <legend>Foto da ocorrência (opcional)</legend>
+                <input type="file" id="foto-galeria" accept="image/*" hidden aria-label="Escolher foto da galeria">
+                <input type="file" id="foto-camera" accept="image/*" capture="environment" hidden aria-label="Tirar foto com a câmera">
+                <div class="acoes-foto">
+                    <button type="button" id="tirar-foto" class="secundario">Tirar foto</button>
+                    <button type="button" id="escolher-foto" class="secundario">Escolher da galeria</button>
+                </div>
+                <p id="ajuda-foto" class="ajuda">Uma foto de até 20 MB. A imagem será reduzida para ocupar menos espaço. Se o formato não abrir, use JPG ou PNG.</p>
+                <img id="foto-preview" alt="Prévia da foto selecionada" hidden>
+                <p id="foto-nome" class="ajuda">Nenhuma foto selecionada.</p>
+                <button type="button" id="remover-foto" class="secundario" hidden>Remover foto</button>
+            </fieldset>
+            <button type="submit" id="salvar-chamado" disabled>Salvar chamado</button>
         </form>
-
-        <hr style="margin: 25px 0;">
-        <h3>Lista de Chamados (Painel do Governo)</h3>
+        <p id="mensagem" role="status" aria-live="polite">Carregando seus chamados…</p>
+        <div class="lista-cabecalho">
+            <h2>Chamados salvos</h2>
+            <span id="total-chamados" aria-label="Quantidade de chamados">0</span>
+        </div>
         <div id="lista-chamados"></div>
-    </div>
-
-    <!-- Importando o JavaScript do mapa (Leaflet) -->
+    </aside>
+    <dialog id="visualizar-foto" aria-labelledby="titulo-foto">
+        <h2 id="titulo-foto">Foto do chamado</h2>
+        <img id="foto-ampliada" alt="Foto anexada ao chamado">
+        <button type="button" id="fechar-foto">Fechar foto</button>
+    </dialog>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    
     <script>
-        // Inicializa o mapa focado no Brasil
-        const map = L.map('map').setView([-14.2350, -51.9253], 4);
+'use strict';
 
-        // Recalcula o mapa quando a área visível muda, inclusive em celulares.
-        if ('ResizeObserver' in window) {
-            const observadorMapa = new ResizeObserver(function () {
-                map.invalidateSize({ pan: false, debounceMoveend: true });
-            });
-            observadorMapa.observe(document.getElementById('map'));
-        }
+const ui = {
+    form: document.getElementById('form-problema'),
+    coords: document.getElementById('coords'),
+    tipo: document.getElementById('tipo'),
+    descricao: document.getElementById('descricao'),
+    galeria: document.getElementById('foto-galeria'),
+    camera: document.getElementById('foto-camera'),
+    escolher: document.getElementById('escolher-foto'),
+    tirar: document.getElementById('tirar-foto'),
+    remover: document.getElementById('remover-foto'),
+    preview: document.getElementById('foto-preview'),
+    nomeFoto: document.getElementById('foto-nome'),
+    salvar: document.getElementById('salvar-chamado'),
+    mensagem: document.getElementById('mensagem'),
+    lista: document.getElementById('lista-chamados'),
+    total: document.getElementById('total-chamados'),
+    dialogo: document.getElementById('visualizar-foto'),
+    ampliada: document.getElementById('foto-ampliada'),
+    fechar: document.getElementById('fechar-foto')
+};
 
-        // Adiciona as imagens do mapa de código aberto
+let banco = null;
+let coordenadas = null;
+let fotoAtual = null;
+let previewUrl = null;
+let salvando = false;
+let processandoFoto = false;
+let revisaoFoto = 0;
+let selecaoMapa = null;
+const registros = new Map();
+const marcadores = new Map();
+const fotosUrl = new Map();
+const MAX_FOTO_BYTES = 20 * 1024 * 1024;
+const MAX_FOTO_PIXELS = 50 * 1000 * 1000;
+
+function avisar(texto, tipo = 'info') {
+    ui.mensagem.textContent = texto;
+    ui.mensagem.className = 'mensagem ' + tipo;
+}
+
+const map = (() => {
+    if (!window.L) return null;
+    try {
+        const mapa = L.map('map').setView([-14.2350, -51.9253], 4);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             referrerPolicy: 'strict-origin-when-cross-origin',
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
+        }).addTo(mapa);
+        if ('ResizeObserver' in window) {
+            new ResizeObserver(() => {
+                mapa.invalidateSize({ pan: false, debounceMoveend: true });
+            }).observe(document.getElementById('map'));
+        }
+        return mapa;
+    } catch (erro) {
+        console.error('Não foi possível iniciar o mapa.', erro);
+        return null;
+    }
+})();
 
-        let cliqueLatitude = 0;
-        let cliqueLongitude = 0;
+function atualizarControles() {
+    // A gravação usa uma fotografia imutável do formulário; bloquear edição
+    // evita apagar uma edição mais recente quando a transação termina.
+    Array.from(ui.form.elements).forEach(campo => { campo.disabled = salvando; });
+    ui.salvar.disabled = !banco || !map || salvando || processandoFoto;
+    ui.salvar.textContent = salvando ? 'Salvando…' : 'Salvar chamado neste aparelho';
+    ui.remover.hidden = !fotoAtual && !processandoFoto;
+}
 
-        map.on('click', function(e) {
-            cliqueLatitude = e.latlng.lat;
-            cliqueLongitude = e.latlng.lng;
-            document.getElementById('coords').value = `${cliqueLatitude.toFixed(5)}, ${cliqueLongitude.toFixed(5)}`;
-        });
-
-        document.getElementById('form-problema').addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const coordsInput = document.getElementById('coords').value;
-            if (!coordsInput) {
-                alert("Por favor, clique em um ponto do mapa primeiro!");
-                return;
+function abrirBanco() {
+    return new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+            reject(new Error('Este navegador não oferece armazenamento local para chamados.'));
+            return;
+        }
+        const pedido = indexedDB.open('sistema-rodovias', 1);
+        pedido.onupgradeneeded = () => {
+            const db = pedido.result;
+            if (!db.objectStoreNames.contains('chamados')) {
+                db.createObjectStore('chamados', { keyPath: 'id' });
             }
+        };
+        pedido.onerror = () => reject(pedido.error);
+        pedido.onblocked = () => avisar('Feche outras abas deste sistema e tente novamente para liberar o armazenamento.', 'erro');
+        pedido.onsuccess = () => resolve(pedido.result);
+    });
+}
 
-            const tipo = document.getElementById('tipo').value;
-            const descricao = document.getElementById('descricao').value;
-            const fotoUrl = document.getElementById('foto-url').value;
+function lerChamados() {
+    return new Promise((resolve, reject) => {
+        const transacao = banco.transaction('chamados', 'readonly');
+        const pedido = transacao.objectStore('chamados').getAll();
+        let dados = [];
+        pedido.onsuccess = () => { dados = pedido.result; };
+        transacao.oncomplete = () => resolve(dados);
+        transacao.onabort = () => reject(transacao.error || pedido.error || new Error('Falha na leitura dos chamados.'));
+        transacao.onerror = () => {};
+    });
+}
 
-            const marcador = L.marker([cliqueLatitude, cliqueLongitude]).addTo(map);
-            
-            marcador.bindPopup(`
-                <b>🚨 ${tipo}</b><br>
-                ${descricao}<br><br>
-                <img src="${fotoUrl}" width="150px" style="border-radius:4px;"><br>
-                <small>Status: Enviado ao DER/DNIT</small>
-            `).openPopup();
+function gravarChamado(registro) {
+    return new Promise((resolve, reject) => {
+        const transacao = banco.transaction('chamados', 'readwrite');
+        const pedido = transacao.objectStore('chamados').add(registro);
+        // Sucesso do pedido não basta: aguardar o commit da transação,
+        // que inclui a foto e os dados no mesmo registro.
+        transacao.oncomplete = () => resolve();
+        transacao.onabort = () => reject(transacao.error || pedido.error || new Error('A gravação foi interrompida.'));
+        transacao.onerror = () => {};
+    });
+}
 
-            const lista = document.getElementById('lista-chamados');
-            const novoChamado = document.createElement('div');
-            novoChamado.className = 'alerta';
-            novoChamado.innerHTML = `
-                <strong>[ABERTO] ${tipo}</strong><br>
-                <small>Local: ${cliqueLatitude.toFixed(4)}, ${cliqueLongitude.toFixed(4)}</small><br>
-                <p style="margin: 5px 0;">${descricao}</p>
-                <a href="#" onclick="map.setView([${cliqueLatitude}, ${cliqueLongitude}], 14); return false;">📍 Focar no Mapa</a>
-            `;
-            lista.prepend(novoChamado);
+function apagarChamado(id) {
+    return new Promise((resolve, reject) => {
+        const transacao = banco.transaction('chamados', 'readwrite');
+        const pedido = transacao.objectStore('chamados').delete(id);
+        transacao.oncomplete = () => resolve();
+        transacao.onabort = () => reject(transacao.error || pedido.error || new Error('A exclusão foi interrompida.'));
+        transacao.onerror = () => {};
+    });
+}
 
-            document.getElementById('form-problema').reset();
-        });
+function novoId() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 15) | 64;
+    bytes[8] = (bytes[8] & 63) | 128;
+    const texto = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    return texto.slice(0, 8) + '-' + texto.slice(8, 12) + '-' + texto.slice(12, 16) + '-' + texto.slice(16, 20) + '-' + texto.slice(20);
+}
+
+function elemento(tag, texto, classe) {
+    const node = document.createElement(tag);
+    if (texto !== undefined) node.textContent = texto;
+    if (classe) node.className = classe;
+    return node;
+}
+
+function urlDaFoto(registro) {
+    if (!(registro.foto instanceof Blob)) return null;
+    if (!fotosUrl.has(registro.id)) fotosUrl.set(registro.id, URL.createObjectURL(registro.foto));
+    return fotosUrl.get(registro.id);
+}
+
+function verFoto(registro) {
+    const url = urlDaFoto(registro);
+    if (!url) return;
+    ui.ampliada.src = url;
+    ui.ampliada.alt = 'Foto anexada ao chamado: ' + registro.tipo;
+    if (typeof ui.dialogo.showModal === 'function') ui.dialogo.showModal();
+    else ui.dialogo.setAttribute('open', '');
+}
+
+function fecharFoto() {
+    if (typeof ui.dialogo.close === 'function') ui.dialogo.close();
+    else ui.dialogo.removeAttribute('open');
+    ui.ampliada.removeAttribute('src');
+}
+
+function focoNoMapa(registro) {
+    if (!map) return;
+    map.setView([registro.lat, registro.lng], 14);
+    // No celular o formulário cobre a base. Deslocar o ponto para a parte
+    // superior visível antes de abrir o balão.
+    const alturaPainel = document.getElementById('painel-controle').getBoundingClientRect().height;
+    if (window.matchMedia('(max-width: 700px)').matches) {
+        map.panBy([0, alturaPainel / 2], { animate: false });
+    }
+    const marcador = marcadores.get(registro.id);
+    if (marcador) marcador.openPopup();
+}
+
+function montarMarcador(registro) {
+    if (!map || marcadores.has(registro.id)) return;
+    const conteudo = elemento('div', undefined, 'popup-chamado');
+    conteudo.append(elemento('strong', registro.tipo));
+    conteudo.append(elemento('p', registro.descricao || 'Sem descrição.'));
+    const url = urlDaFoto(registro);
+    if (url) {
+        const imagem = elemento('img', undefined, 'foto-popup');
+        imagem.src = url;
+        imagem.alt = 'Foto do chamado';
+        imagem.width = 180;
+        conteudo.append(imagem);
+    }
+    conteudo.append(elemento('p', 'Salvo neste aparelho', 'status-chamado'));
+    const marcador = L.marker([registro.lat, registro.lng]).addTo(map).bindPopup(conteudo, { maxWidth: 240 });
+    marcadores.set(registro.id, marcador);
+}
+
+async function excluirRegistro(registro, botao) {
+    if (!window.confirm('Excluir este chamado e sua foto deste aparelho? Esta ação não pode ser desfeita.')) return;
+    botao.disabled = true;
+    try {
+        await apagarChamado(registro.id);
+        registros.delete(registro.id);
+        if (marcadores.has(registro.id)) {
+            marcadores.get(registro.id).remove();
+            marcadores.delete(registro.id);
+        }
+        if (fotosUrl.has(registro.id)) {
+            if (ui.ampliada.getAttribute('src') === fotosUrl.get(registro.id)) fecharFoto();
+            URL.revokeObjectURL(fotosUrl.get(registro.id));
+            fotosUrl.delete(registro.id);
+        }
+        renderizarLista();
+        avisar('Chamado excluído deste aparelho.', 'sucesso');
+    } catch (erro) {
+        botao.disabled = false;
+        avisar('Não foi possível excluir. O chamado foi mantido. Tente novamente.', 'erro');
+        console.error(erro);
+    }
+}
+
+function renderizarLista() {
+    ui.lista.replaceChildren();
+    ui.total.textContent = String(registros.size);
+    if (!registros.size) {
+        ui.lista.append(elemento('p', 'Nenhum chamado salvo neste aparelho.', 'vazio'));
+        return;
+    }
+    const ordenados = Array.from(registros.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    for (const registro of ordenados) {
+        montarMarcador(registro);
+        const card = elemento('article', undefined, 'chamado-card');
+        card.dataset.id = registro.id;
+        card.append(elemento('h3', registro.tipo));
+        card.append(elemento('p', 'Salvo neste aparelho', 'status-chamado'));
+        card.append(elemento('p', new Date(registro.createdAt).toLocaleString('pt-BR'), 'data-chamado'));
+        card.append(elemento('p', 'Local: ' + registro.lat.toFixed(5) + ', ' + registro.lng.toFixed(5), 'coordenadas-chamado'));
+        if (registro.descricao) card.append(elemento('p', registro.descricao, 'descricao-chamado'));
+        const url = urlDaFoto(registro);
+        if (url) {
+            const miniatura = elemento('img', undefined, 'foto-chamado');
+            miniatura.src = url;
+            miniatura.alt = 'Foto anexada: ' + registro.tipo;
+            miniatura.loading = 'lazy';
+            card.append(miniatura);
+            const ampliar = elemento('button', 'Ver foto', 'secundario');
+            ampliar.type = 'button';
+            ampliar.addEventListener('click', () => verFoto(registro));
+            card.append(ampliar);
+        }
+        const acoes = elemento('div', undefined, 'acoes-chamado');
+        const focar = elemento('button', 'Focar no mapa', 'secundario');
+        focar.type = 'button';
+        focar.disabled = !map;
+        focar.addEventListener('click', () => focoNoMapa(registro));
+        const excluir = elemento('button', 'Excluir', 'perigo');
+        excluir.type = 'button';
+        excluir.addEventListener('click', () => excluirRegistro(registro, excluir));
+        acoes.append(focar, excluir);
+        card.append(acoes);
+        ui.lista.append(card);
+    }
+}
+
+async function decodificarFoto(arquivo) {
+    if (typeof createImageBitmap === 'function') {
+        try { return await createImageBitmap(arquivo); } catch (_) { /* tentar decodificador do navegador */ }
+    }
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(arquivo);
+        const imagem = new Image();
+        imagem.onload = () => { URL.revokeObjectURL(url); resolve(imagem); };
+        imagem.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não foi possível ler esta foto. Escolha uma imagem JPG, PNG ou WebP.')); };
+        imagem.src = url;
+    });
+}
+
+async function prepararFoto(arquivo) {
+    if (arquivo.size > MAX_FOTO_BYTES) throw new Error('A foto é muito grande. Escolha uma imagem de até 20 MB.');
+    if (!arquivo.size || (arquivo.type && !arquivo.type.startsWith('image/')) || arquivo.type === 'image/svg+xml') {
+        throw new Error('Escolha uma foto JPG, PNG ou WebP. Este arquivo não é uma foto compatível.');
+    }
+    const imagem = await decodificarFoto(arquivo);
+    try {
+        const largura = imagem.naturalWidth || imagem.width;
+        const altura = imagem.naturalHeight || imagem.height;
+        if (!largura || !altura || largura * altura > MAX_FOTO_PIXELS) throw new Error('A resolução da foto é muito alta. Escolha uma imagem menor.');
+        const escala = Math.min(1, 1600 / Math.max(largura, altura));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(largura * escala));
+        canvas.height = Math.max(1, Math.round(altura * escala));
+        const contexto = canvas.getContext('2d');
+        if (!contexto) throw new Error('Este navegador não conseguiu preparar a foto.');
+        contexto.fillStyle = '#ffffff';
+        contexto.fillRect(0, 0, canvas.width, canvas.height);
+        contexto.drawImage(imagem, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise((resolve, reject) => canvas.toBlob(resultado => {
+            if (resultado) resolve(resultado);
+            else reject(new Error('Não foi possível preparar a foto. Tente outra imagem.'));
+        }, 'image/jpeg', 0.82));
+        canvas.width = 1;
+        canvas.height = 1;
+        return blob;
+    } finally {
+        if (typeof imagem.close === 'function') imagem.close();
+    }
+}
+
+function atualizarPrevia() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = fotoAtual ? URL.createObjectURL(fotoAtual.blob) : null;
+    ui.preview.hidden = !previewUrl;
+    if (previewUrl) ui.preview.src = previewUrl;
+    else ui.preview.removeAttribute('src');
+    ui.nomeFoto.textContent = fotoAtual ? fotoAtual.nome + ' · foto pronta para salvar' : 'Nenhuma foto anexada.';
+}
+
+async function selecionarFoto(evento) {
+    const arquivo = evento.target.files && evento.target.files[0];
+    if (!arquivo || salvando) return;
+    const revisao = ++revisaoFoto;
+    processandoFoto = true;
+    ui.nomeFoto.textContent = 'Preparando a foto…';
+    atualizarControles();
+    try {
+        const blob = await prepararFoto(arquivo);
+        // Uma seleção antiga nunca deve substituir a foto escolhida depois,
+        // nem reaparecer após o usuário tocar em Remover.
+        if (revisao !== revisaoFoto) return;
+        fotoAtual = { blob, nome: arquivo.name || 'Foto da câmera.jpg' };
+        atualizarPrevia();
+        avisar('Foto anexada. Toque em salvar para registrar o chamado.', 'info');
+    } catch (erro) {
+        if (revisao !== revisaoFoto) return;
+        atualizarPrevia();
+        avisar(erro.message || 'Não foi possível preparar esta foto.', 'erro');
+    } finally {
+        if (revisao === revisaoFoto) {
+            processandoFoto = false;
+            ui.galeria.value = '';
+            ui.camera.value = '';
+            atualizarControles();
+        }
+    }
+}
+
+function removerFoto() {
+    if (salvando) return;
+    revisaoFoto++;
+    processandoFoto = false;
+    fotoAtual = null;
+    ui.galeria.value = '';
+    ui.camera.value = '';
+    atualizarPrevia();
+    atualizarControles();
+}
+
+ui.escolher.addEventListener('click', () => ui.galeria.click());
+ui.tirar.addEventListener('click', () => ui.camera.click());
+ui.galeria.addEventListener('change', selecionarFoto);
+ui.camera.addEventListener('change', selecionarFoto);
+ui.remover.addEventListener('click', removerFoto);
+ui.fechar.addEventListener('click', fecharFoto);
+ui.dialogo.addEventListener('close', () => ui.ampliada.removeAttribute('src'));
+ui.dialogo.addEventListener('click', evento => {
+    if (evento.target !== ui.dialogo) return;
+    const caixa = ui.dialogo.getBoundingClientRect();
+    if (evento.clientX < caixa.left || evento.clientX > caixa.right || evento.clientY < caixa.top || evento.clientY > caixa.bottom) fecharFoto();
+});
+
+if (map) {
+    map.on('click', evento => {
+        if (salvando) return;
+        coordenadas = { lat: evento.latlng.lat, lng: evento.latlng.lng };
+        ui.coords.value = coordenadas.lat.toFixed(5) + ', ' + coordenadas.lng.toFixed(5);
+        if (selecaoMapa) selecaoMapa.remove();
+        selecaoMapa = L.circleMarker([coordenadas.lat, coordenadas.lng], {
+            radius: 7, color: '#075db5', fillColor: '#ffffff', fillOpacity: 1, weight: 3, interactive: false
+        }).addTo(map);
+    });
+}
+
+ui.form.addEventListener('submit', async evento => {
+    evento.preventDefault();
+    if (salvando || processandoFoto || !banco) return;
+    if (!coordenadas) {
+        avisar('Toque em um ponto do mapa para indicar o local do problema.', 'erro');
+        return;
+    }
+    const registro = {
+        id: novoId(), lat: coordenadas.lat, lng: coordenadas.lng,
+        tipo: ui.tipo.value, descricao: ui.descricao.value.trim().slice(0, 2000),
+        createdAt: new Date().toISOString(),
+        foto: fotoAtual ? fotoAtual.blob : null,
+        fotoNome: fotoAtual ? fotoAtual.nome : null
+    };
+    salvando = true;
+    atualizarControles();
+    avisar('Salvando o chamado e a foto neste aparelho…');
+    try {
+        await gravarChamado(registro);
+    } catch (erro) {
+        salvando = false;
+        atualizarControles();
+        const semEspaco = erro && erro.name === 'QuotaExceededError';
+        avisar(semEspaco
+            ? 'Sem espaço no navegador. O chamado não foi salvo. Exclua registros antigos ou tente uma foto menor; o formulário foi mantido.'
+            : 'Não foi possível salvar neste navegador. O formulário foi mantido. Verifique se o armazenamento está permitido e tente novamente.', 'erro');
+        console.error(erro);
+        return;
+    }
+    registros.set(registro.id, registro);
+    salvando = false;
+    ui.form.reset();
+    coordenadas = null;
+    if (selecaoMapa) { selecaoMapa.remove(); selecaoMapa = null; }
+    removerFoto();
+    renderizarLista();
+    atualizarControles();
+    avisar('Chamado salvo neste aparelho' + (registro.foto ? ' com a foto.' : '.') + ' Ele continuará disponível ao reabrir esta página.', 'sucesso');
+});
+
+async function iniciar() {
+    atualizarControles();
+    avisar('Carregando os chamados salvos neste aparelho…');
+    try {
+        banco = await abrirBanco();
+        banco.onversionchange = () => {
+            banco.close();
+            banco = null;
+            atualizarControles();
+            avisar('O armazenamento foi atualizado em outra aba. Recarregue esta página.', 'erro');
+        };
+        const salvos = await lerChamados();
+        for (const registro of salvos) registros.set(registro.id, registro);
+        renderizarLista();
+        avisar(map ? 'Pronto para registrar. Os chamados e fotos ficam neste navegador.' : 'O mapa não carregou. Seus chamados salvos estão preservados; confira a conexão e recarregue.', map ? 'info' : 'erro');
+    } catch (erro) {
+        if (banco) banco.close();
+        banco = null;
+        avisar('Não foi possível abrir os chamados neste navegador. Permita o armazenamento do site e tente fora da navegação privada. Nenhum registro foi apagado.', 'erro');
+        console.error(erro);
+    }
+    atualizarControles();
+}
+
+iniciar();
+
     </script>
 </body>
 </html>
-
