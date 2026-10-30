@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protótipo: Monitoramento de Rodovias</title>
+    
+    <!-- Importando o CSS do mapa (Leaflet) -->
+    <link rel="stylesheet" href="https://unpkg.com" />
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+        #map {
+            flex: 3;
+            height: 100%;
+        }
+        #painel-controle {
+            flex: 1;
+            background: #f4f4f9;
+            padding: 20px;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea, button {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            border: none;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .alerta {
+            background: #fff;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 5px solid #ff4d4d;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- O MAPA FICA AQUI -->
+    <div id="map"></div>
+
+    <!-- O PAINEL LATERAL (Simulando o sistema do governo ou envio) -->
+    <div id="painel-controle">
+        <h2>Reportar Problema</h2>
+        <p><small>💡 Clique em qualquer ponto do mapa para capturar a localização exata da rodovia.</small></p>
+        
+        <form id="form-problema">
+            <div class="form-group">
+                <label>Coordenadas Capturadas:</label>
+                <input type="text" id="coords" readonly placeholder="Clique no mapa para preencher">
+            </div>
+            <div class="form-group">
+                <label>Tipo de Ocorrência:</label>
+                <select id="tipo">
+                    <option value="Buraco na Pista">Cratera / Buraco na Pista</option>
+                    <option value="Queda de Barreira">Queda de Barreira / Desmoronamento</option>
+                    <option value="Sinalização Ruim">Falta de Sinalização</option>
+                    <option value="Acostamento Danificado">Problema no Acostamento</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Descrição do Problema:</label>
+                <textarea id="descricao" rows="3" placeholder="Ex: Buraco profundo na faixa da direita no KM 42..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Simular Link da Foto (URL):</label>
+                <input type="text" id="foto-url" value="https://unsplash.com" placeholder="Cole o link de uma imagem">
+            </div>
+            <button type="submit">Enviar Relato para o Governo</button>
+        </form>
+
+        <hr style="margin: 25px 0;">
+        <h3>Lista de Chamados (Painel do Governo)</h3>
+        <div id="lista-chamados">
+            <!-- Os chamados enviados vão aparecer aqui dinamicamente -->
+        </div>
+    </div>
+
+    <!-- Importando o JavaScript do mapa (Leaflet) -->
+    <script src="https://unpkg.com"></script>
+    
+    <script>
+        // 1. Inicializa o mapa focado no Brasil
+        const map = L.map('map').setView([-14.2350, -51.9253], 4);
+
+        // 2. Adiciona as imagens do mapa (OpenStreetMap de código aberto)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let cliqueLatitude = 0;
+        let cliqueLongitude = 0;
+
+        // 3. Detecta o clique no mapa para simular a geolocalização do motorista
+        map.on('click', function(e) {
+            cliqueLatitude = e.latlng.lat;
+            cliqueLongitude = e.latlng.lng;
+            
+            // Preenche o campo de texto com as coordenadas
+            document.getElementById('coords').value = `${cliqueLatitude.toFixed(5)}, ${cliqueLongitude.toFixed(5)}`;
+        });
+
+        // 4. Gerencia o envio do formulário
+        document.getElementById('form-problema').addEventListener('submit', function(e) {
+            e.preventDefault(); // Impede a página de recarregar
+
+            const coordsInput = document.getElementById('coords').value;
+            if (!coordsInput) {
+                alert("Por favor, clique em um ponto do mapa primeiro!");
+                return;
+            }
+
+            const tipo = document.getElementById('tipo').value;
+            const descricao = document.getElementById('descricao').value;
+            const fotoUrl = document.getElementById('foto-url').value;
+
+            // Criar o marcador (Pin) vermelho no mapa no local exato do clique
+            const marcador = L.marker([cliqueLatitude, cliqueLongitude]).addTo(map);
+            
+            // Pop-up que aparece quando alguém clica no Pin no mapa
+            marcador.bindPopup(`
+                <b>🚨 ${tipo}</b><br>
+                ${descricao}<br><br>
+                <img src="${fotoUrl}" width="150px" style="border-radius:4px;"><br>
+                <small>Status: Enviado ao DER/DNIT</small>
+            `).openPopup();
+
+            // Adicionar o chamado na lista lateral do governo
+            const lista = document.getElementById('lista-chamados');
+            const novoChamado = document.createElement('div');
+            novoChamado.className = 'alerta';
+            novoChamado.innerHTML = `
+                <strong>[ABERTO] ${tipo}</strong><br>
+                <small>Local: ${cliqueLatitude.toFixed(4)}, ${cliqueLongitude.toFixed(4)}</small><br>
+                <p style="margin: 5px 0;">${descricao}</p>
+                <a href="#" onclick="map.setView([${cliqueLatitude}, ${cliqueLongitude}], 14); return false;">📍 Focar no Mapa</a>
+            `;
+            lista.prepend(novoChamado);
+
+            // Limpa o formulário para o próximo teste
+            document.getElementById('form-problema').reset();
+        });
+    </script>
+</body>
+</html>
